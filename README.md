@@ -1,130 +1,140 @@
-# Crawler and RAG Agent
+I'll enhance this README to make it more comprehensive and better organized. Here's an improved version:
 
-An intelligent documentation crawler and RAG (Retrieval-Augmented Generation) agent built using Pydantic AI and Supabase. The agent can crawl documentation websites, store content in a vector database, and provide intelligent answers to user questions by retrieving and analyzing relevant documentation chunks.
+# Documentation Crawler and RAG Agent
 
-## Features
+An intelligent documentation crawler and RAG (Retrieval-Augmented Generation) agent that transforms documentation websites into an interactive knowledge base. Built with Pydantic AI and Supabase, this system crawls documentation, indexes it in a vector database, and provides AI-powered answers to user queries using contextually relevant documentation chunks.
 
-- Documentation website crawling and chunking
-- Vector database storage with Supabase
-- Semantic search using OpenAI embeddings
-- RAG-based question answering
-- Support for code block preservation
-- Streamlit UI for interactive querying
-- Available as both API endpoint and web interface
+## Core Capabilities
 
-## Prerequisites
+- Intelligent web crawling with automatic documentation structure detection
+- Advanced content chunking with preservation of code blocks and context
+- Vector-based semantic search powered by OpenAI embeddings 
+- RAG-enhanced question answering with source citations
+- Production-ready API endpoints for integration
+- Interactive Streamlit web interface for direct usage
+- Robust error handling and retry mechanisms
 
-- Python 3.11+
-- Supabase account and database
-- OpenAI API key
+## Technical Requirements
+
+- Python 3.11 or newer
+- Supabase account with vector database enabled
+- OpenAI API access
 - Streamlit (for web interface)
+- 2GB+ RAM recommended
 
-## Installation
+## Quick Start
 
-1. Clone the repository:
+1. Clone and setup the environment:
 ```bash
 git clone https://github.com/coleam00/ottomator-agents.git
 cd ottomator-agents/crawl4AI-agent
-```
 
-2. Install dependencies (recommended to use a Python virtual environment):
-```bash
 python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+source venv/bin/activate  # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-3. Set up environment variables:
-   - Rename `.env.example` to `.env`
-   - Edit `.env` with your API keys and preferences:
-   ```env
-   OPENAI_API_KEY=your_openai_api_key
-   SUPABASE_URL=your_supabase_url
-   SUPABASE_SERVICE_KEY=your_supabase_service_key
-   LLM_MODEL=gpt-4o-mini  # or your preferred OpenAI model
-   ```
-
-## Usage
-
-### Database Setup
-
-Execute the SQL commands in `site_pages.sql` to:
-1. Create the necessary tables
-2. Enable vector similarity search
-3. Set up Row Level Security policies
-
-In Supabase, do this by going to the "SQL Editor" tab and pasting in the SQL into the editor there. Then click "Run".
-
-### Crawl Documentation
-
-To crawl and store documentation in the vector database:
-
+2. Configure your environment:
 ```bash
-python crawl_pydantic_ai_docs.py
+cp .env.example .env
 ```
 
-This will:
-1. Fetch URLs from the documentation sitemap
-2. Crawl each page and split into chunks
-3. Generate embeddings and store in Supabase
+Update `.env` with your credentials:
+```env
+OPENAI_API_KEY=sk-...
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_SERVICE_KEY=eyJ...
+LLM_MODEL=gpt-4-turbo  # Or your preferred model
+CHUNK_SIZE=5000        # Optional: Adjust chunking size
+```
 
-### Streamlit Web Interface
+3. Initialize the database:
+```bash
+psql -h database.supabase.co -d postgres -U postgres -f site_pages.sql
+```
+Or copy the contents of `site_pages.sql` into Supabase's SQL Editor.
 
-For an interactive web interface to query the documentation:
+4. Start crawling:
+```bash
+python crawl_pydantic_ai_docs.py --url https://your-docs-site.com
+```
 
+5. Launch the UI:
 ```bash
 streamlit run streamlit_ui.py
 ```
 
-The interface will be available at `http://localhost:8501`
-
-## Configuration
+## Architecture
 
 ### Database Schema
-
-The Supabase database uses the following schema:
 ```sql
 CREATE TABLE site_pages (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    url TEXT,
-    chunk_number INTEGER,
-    title TEXT,
+    url TEXT NOT NULL,
+    chunk_number INTEGER NOT NULL,
+    title TEXT NOT NULL,
     summary TEXT,
-    content TEXT,
-    metadata JSONB,
-    embedding VECTOR(1536)
+    content TEXT NOT NULL,
+    metadata JSONB DEFAULT '{}',
+    embedding VECTOR(1536),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()),
+    UNIQUE(url, chunk_number)
 );
 ```
 
-### Chunking Configuration
+### Key Components
 
-You can configure chunking parameters in `crawl_pydantic_ai_docs.py`:
+- **Crawler Engine**: Intelligent web crawler with rate limiting and retry logic
+- **Content Processor**: Advanced text chunking with context preservation
+- **Vector Store**: Supabase pgvector integration for semantic search
+- **RAG Agent**: Combines retrieved context with LLM for accurate answers
+- **API Layer**: FastAPI endpoints for programmatic access
+- **Web Interface**: Streamlit-based UI for interactive usage
+
+## Advanced Configuration
+
+### Crawling Settings
 ```python
-chunk_size = 5000  # Characters per chunk
+CRAWLER_CONFIG = {
+    'chunk_size': 5000,
+    'overlap': 500,
+    'max_retries': 3,
+    'retry_delay': 1,
+    'preserve_code_blocks': True,
+    'max_tokens_per_chunk': 1000
+}
+```
+![Screenshot 2025-01-23 003818](https://github.com/user-attachments/assets/be2a09ae-2125-49e1-8ce0-764b027a93bc)
+
+![Screenshot 2025-01-23 003408](https://github.com/user-attachments/assets/e576198e-aa54-43a7-bb4d-c7ef5e983a02)
+
+![Screenshot 2025-01-23 003328](https://github.com/user-attachments/assets/d77a7c2d-1e4f-4645-a7c6-5cb7739d625f)
+
+![Screenshot 2025-01-23 003838](https://github.com/user-attachments/assets/eb254219-a3f0-44a0-9d18-c315b7b113f8)
+
+### Custom Error Handling
+The system implements comprehensive error handling for:
+- Network timeouts and connection failures
+- Rate limit management for API calls
+- Database connection issues
+- Invalid or malformed content
+- Token limit exceeded scenarios
+
+## Integration Examples
+
+### API Usage
+```python
+from crawl4ai import RAGAgent
+
+agent = RAGAgent()
+response = await agent.query("How do I implement authentication?")
+print(response.answer)
+print(response.sources)  # Returns relevant documentation URLs
 ```
 
-The chunker intelligently preserves:
-- Code blocks
-- Paragraph boundaries
-- Sentence boundaries
-
-## Project Structure
-
-- `crawl_pydantic_ai_docs.py`: Documentation crawler and processor
-- `pydantic_ai_expert.py`: RAG agent implementation
-- `streamlit_ui.py`: Web interface
-- `site_pages.sql`: Database setup commands
-- `requirements.txt`: Project dependencies
-
-## Live Agent Studio Version
-
-If you're interested in seeing how this agent is implemented in the Live Agent Studio, check out the `studio-integration-api` directory. This contains the API endpoint for the production version of the agent that runs on the platform.
-
-## Error Handling
-
-The system includes robust error handling for:
-- Network failures during crawling
-- API rate limits
-- Database connection issues
-- Embedding generation errors
-- Invalid URLs or content
+### Streaming Interface
+```python
+async for chunk in agent.stream_response("Explain routing"):
+    print(chunk, end="")
+```
