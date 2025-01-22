@@ -1,109 +1,113 @@
-
 # Documentation Crawler and RAG Agent
 
-An intelligent documentation crawler and RAG (Retrieval-Augmented Generation) agent that transforms documentation websites into an interactive knowledge base. Built with Pydantic AI and Supabase, this system crawls documentation, indexes it in a vector database, and provides AI-powered answers to user queries using contextually relevant documentation chunks.
+An intelligent system for crawling documentation sites and building a smart question-answering interface using Pydantic AI and Supabase. Combines web crawling, vector search, and AI to deliver accurate answers from documentation.
 
-## Core Capabilities
+## Features
+- Smart documentation crawler
+- Vector search with Supabase
+- OpenAI embeddings for search
+- Context-aware answers
+- Code snippet preservation  
+- Web interface
+- API endpoints
 
-- Intelligent web crawling with automatic documentation structure detection
-- Advanced content chunking with preservation of code blocks and context
-- Vector-based semantic search powered by OpenAI embeddings 
-- RAG-enhanced question answering with source citations
-- Production-ready API endpoints for integration
-- Interactive Streamlit web interface for direct usage
-- Robust error handling and retry mechanisms
-
-## Technical Requirements
-
-- Python 3.11 or newer
-- Supabase account with vector database enabled
+## Setup Requirements
+- Python 3.11+
+- Supabase database
 - OpenAI API access
-- Streamlit (for web interface)
-- 2GB+ RAM recommended
+- Streamlit 
 
-## Quick Start
-
-1. Clone and setup the environment:
+## Installation
+1. Get the code:
 ```bash
 git clone https://github.com/coleam00/ottomator-agents.git
 cd ottomator-agents/crawl4AI-agent
+```
 
+2. Install packages:
+```bash
 python -m venv venv
 source venv/bin/activate  # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-2. Configure your environment:
+3. Configure settings:
+   - Copy `.env.example` to `.env`
+   - Add your credentials:
+   ```env
+   OPENAI_API_KEY=your_key
+   SUPABASE_URL=your_url
+   SUPABASE_SERVICE_KEY=your_key
+   LLM_MODEL=gpt-4-turbo
+   ```
+
+## Setup Steps
+
+### Database Init
+Run `site_pages.sql` to create:
+1. Required tables
+2. Vector search
+3. Security rules
+
+Access SQL Editor in Supabase to run the commands.
+
+### Start Crawling 
+Index documentation:
 ```bash
-cp .env.example .env
+python crawl_pydantic_ai_docs.py
 ```
 
-Update `.env` with your credentials:
-```env
-OPENAI_API_KEY=sk-...
-SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_SERVICE_KEY=eyJ...
-LLM_MODEL=gpt-4-turbo  # Or your preferred model
-CHUNK_SIZE=5000        # Optional: Adjust chunking size
-```
+This will:
+1. Get sitemap URLs
+2. Process pages
+3. Store embeddings
 
-3. Initialize the database:
-```bash
-psql -h database.supabase.co -d postgres -U postgres -f site_pages.sql
-```
-Or copy the contents of `site_pages.sql` into Supabase's SQL Editor.
-
-4. Start crawling:
-```bash
-python crawl_pydantic_ai_docs.py --url https://your-docs-site.com
-```
-
-5. Launch the UI:
+### Launch Interface
+Start web UI:
 ```bash
 streamlit run streamlit_ui.py
 ```
 
-## Architecture
+Access at `localhost:8501`
 
-### Database Schema
+## Settings
+
+### Database Structure
 ```sql
 CREATE TABLE site_pages (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    url TEXT NOT NULL,
-    chunk_number INTEGER NOT NULL,
-    title TEXT NOT NULL,
+    url TEXT,
+    chunk_number INTEGER,
+    title TEXT,
     summary TEXT,
-    content TEXT NOT NULL,
-    metadata JSONB DEFAULT '{}',
-    embedding VECTOR(1536),
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()),
-    UNIQUE(url, chunk_number)
+    content TEXT,
+    metadata JSONB,
+    embedding VECTOR(1536)
 );
 ```
 
-### Key Components
-
-- **Crawler Engine**: Intelligent web crawler with rate limiting and retry logic
-- **Content Processor**: Advanced text chunking with context preservation
-- **Vector Store**: Supabase pgvector integration for semantic search
-- **RAG Agent**: Combines retrieved context with LLM for accurate answers
-- **API Layer**: FastAPI endpoints for programmatic access
-- **Web Interface**: Streamlit-based UI for interactive usage
-
-## Advanced Configuration
-
-### Crawling Settings
+### Chunk Settings
+Adjust in `crawl_pydantic_ai_docs.py`:
 ```python
-CRAWLER_CONFIG = {
-    'chunk_size': 5000,
-    'overlap': 500,
-    'max_retries': 3,
-    'retry_delay': 1,
-    'preserve_code_blocks': True,
-    'max_tokens_per_chunk': 1000
-}
+chunk_size = 5000  # Characters per chunk
 ```
+
+Preserves:
+- Code blocks
+- Paragraphs
+- Sentences
+
+## Code Structure
+- `crawl_pydantic_ai_docs.py`: Crawler
+- `pydantic_ai_expert.py`: QA logic
+- `streamlit_ui.py`: Interface
+- `site_pages.sql`: Database setup
+- `requirements.txt`: Dependencies
+
+## Production Version
+Check `studio-integration-api` for the production API implementation.
+
+
 ![Screenshot 2025-01-23 003818](https://github.com/user-attachments/assets/be2a09ae-2125-49e1-8ce0-764b027a93bc)
 
 ![Screenshot 2025-01-23 003408](https://github.com/user-attachments/assets/e576198e-aa54-43a7-bb4d-c7ef5e983a02)
@@ -112,28 +116,10 @@ CRAWLER_CONFIG = {
 
 ![Screenshot 2025-01-23 003838](https://github.com/user-attachments/assets/eb254219-a3f0-44a0-9d18-c315b7b113f8)
 
-### Custom Error Handling
-The system implements comprehensive error handling for:
-- Network timeouts and connection failures
-- Rate limit management for API calls
-- Database connection issues
-- Invalid or malformed content
-- Token limit exceeded scenarios
-
-## Integration Examples
-
-### API Usage
-```python
-from crawl4ai import RAGAgent
-
-agent = RAGAgent()
-response = await agent.query("How do I implement authentication?")
-print(response.answer)
-print(response.sources)  # Returns relevant documentation URLs
-```
-
-### Streaming Interface
-```python
-async for chunk in agent.stream_response("Explain routing"):
-    print(chunk, end="")
-```
+## Error Management
+Handles:
+- Network issues
+- API limits
+- Database errors
+- Embedding fails
+- Bad URLs
